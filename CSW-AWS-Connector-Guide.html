@@ -1,0 +1,583 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+  <meta charset="utf-8" />
+  <meta name="generator" content="pandoc" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+  <title>Cisco Secure Workload — AWS Connector Guide</title>
+  <style>
+
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+
+ul.task-list[class]{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+font-size: inherit;
+width: 0.8em;
+margin: 0 0.8em 0.2em -1.6em;
+vertical-align: middle;
+}
+.display.math{display: block; text-align: center; margin: 0.5rem auto;}
+
+html { -webkit-text-size-adjust: 100%; }
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+{ counter-reset: source-line 0; }
+pre.numberSource code > span
+{ position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+{ content: counter(source-line);
+position: relative; left: -1em; text-align: right; vertical-align: baseline;
+border: none; display: inline-block;
+-webkit-touch-callout: none; -webkit-user-select: none;
+-khtml-user-select: none; -moz-user-select: none;
+-ms-user-select: none; user-select: none;
+padding: 0 4px; width: 4em;
+color: #aaaaaa;
+}
+pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa; padding-left: 4px; }
+div.sourceCode
+{ }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+code span.al { color: #ff0000; font-weight: bold; } 
+code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } 
+code span.at { color: #7d9029; } 
+code span.bn { color: #40a070; } 
+code span.bu { color: #008000; } 
+code span.cf { color: #007020; font-weight: bold; } 
+code span.ch { color: #4070a0; } 
+code span.cn { color: #880000; } 
+code span.co { color: #60a0b0; font-style: italic; } 
+code span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } 
+code span.do { color: #ba2121; font-style: italic; } 
+code span.dt { color: #902000; } 
+code span.dv { color: #40a070; } 
+code span.er { color: #ff0000; font-weight: bold; } 
+code span.ex { } 
+code span.fl { color: #40a070; } 
+code span.fu { color: #06287e; } 
+code span.im { color: #008000; font-weight: bold; } 
+code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } 
+code span.kw { color: #007020; font-weight: bold; } 
+code span.op { color: #666666; } 
+code span.ot { color: #007020; } 
+code span.pp { color: #bc7a00; } 
+code span.sc { color: #4070a0; } 
+code span.ss { color: #bb6688; } 
+code span.st { color: #4070a0; } 
+code span.va { color: #19177c; } 
+code span.vs { color: #4070a0; } 
+code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } 
+</style>
+  <style type="text/css">body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;max-width:900px;margin:2rem auto;padding:0 1.5rem;color:#1a1a2e;line-height:1.65}h1{font-size:1.8rem;border-bottom:2px solid #005073;padding-bottom:.5rem}h2{font-size:1.3rem;margin-top:2rem;color:#005073}h3{font-size:1.1rem;color:#333}code{background:#f4f4f4;padding:.15em .4em;border-radius:3px;font-size:.9em}pre{background:#f4f4f4;padding:1rem;border-radius:4px;overflow-x:auto}table{border-collapse:collapse;width:100%;margin:1rem 0;font-size:.92em}th{background:#005073;color:#fff;padding:.5rem .75rem;text-align:left}td{padding:.45rem .75rem;border-bottom:1px solid #e2e2e2}tr:nth-child(even) td{background:#f9f9f9}blockquote{border-left:4px solid #005073;margin:0;padding:.5rem 1rem;background:#f0f7fb;color:#444}a{color:#0066cc}
+</style>
+</head>
+<body>
+<h1 id="cisco-secure-workload-aws-connector-guide">Cisco Secure Workload
+— AWS Connector Guide</h1>
+<blockquote>
+<p><strong>Disclaimer:</strong> Community reference guide by Cisco
+Solutions Engineering. Always consult <a href="https://www.cisco.com/c/en/us/products/security/tetration/index.html">official
+Cisco Secure Workload documentation</a> for authoritative guidance.</p>
+</blockquote>
+<h2 id="table-of-contents">Table of Contents</h2>
+<ol type="1">
+<li><a href="#1-overview">Overview</a></li>
+<li><a href="#2-architecture">Architecture</a></li>
+<li><a href="#3-capabilities">Capabilities</a></li>
+<li><a href="#4-prerequisites">Prerequisites</a></li>
+<li><a href="#5-step-a--aws-iam-setup">Step A — AWS IAM Setup</a></li>
+<li><a href="#6-step-b--configure-the-aws-connector-in-csw">Step B —
+Configure the AWS Connector in CSW</a></li>
+<li><a href="#7-step-c--vpc-and-capability-configuration">Step C — VPC
+and Capability Configuration</a></li>
+<li><a href="#8-eks-integration">EKS Integration</a></li>
+<li><a href="#9-segmentation-with-aws-security-groups">Segmentation with
+AWS Security Groups</a></li>
+<li><a href="#10-verification">Verification</a></li>
+<li><a href="#11-limits">Limits</a></li>
+<li><a href="#12-troubleshooting">Troubleshooting</a></li>
+<li><a href="#13-related-resources">Related Resources</a></li>
+</ol>
+<hr />
+<h2 id="overview">1. Overview</h2>
+<p>The <strong>AWS connector</strong> in Cisco Secure Workload
+automatically ingests workload inventory and labels from <strong>AWS
+VPCs</strong>, streams <strong>VPC flow logs</strong>, and enforces
+segmentation policy using <strong>AWS native Security Groups</strong> —
+all without deploying CSW agents on every EC2 instance.</p>
+<p>This is the foundation of CSW visibility and segmentation for
+AWS-hosted workloads, enabling consistent Zero Trust policy across
+on-premises and AWS environments from a single policy engine.</p>
+<h3 id="what-the-aws-connector-provides">What the AWS connector
+provides</h3>
+<table>
+<colgroup>
+<col style="width: 35%" />
+<col style="width: 38%" />
+<col style="width: 26%" />
+</colgroup>
+<thead>
+<tr>
+<th>Capability</th>
+<th>Description</th>
+<th>Use case</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Label ingestion</strong></td>
+<td>EC2 instance tags pulled into CSW labels</td>
+<td>CMDB-style scope automation</td>
+</tr>
+<tr>
+<td><strong>Flow log ingestion</strong></td>
+<td>VPC flow logs from S3 → CSW for ADM</td>
+<td>Traffic visualization, policy discovery</td>
+</tr>
+<tr>
+<td><strong>Segmentation</strong></td>
+<td>CSW policies → AWS Security Groups (auto-programmed)</td>
+<td>Cloud-native enforcement</td>
+</tr>
+<tr>
+<td><strong>EKS integration</strong></td>
+<td>K8s node/pod/service metadata from EKS</td>
+<td>Container workload visibility</td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p><strong>No virtual appliance required.</strong> The AWS connector
+runs as a service within the CSW cluster — it connects to AWS APIs
+directly.</p>
+</blockquote>
+<hr />
+<h2 id="architecture">2. Architecture</h2>
+<pre><code>┌──────────────────────────────────────────────────────────────────────┐
+│                         AWS Account / VPC                             │
+│                                                                       │
+│  ┌──────────────────────────────────────────────────────────────┐   │
+│  │  VPC (us-east-1)                                              │   │
+│  │                                                               │   │
+│  │  EC2 instances with tags:                                     │   │
+│  │    Name=PaymentAPI, Env=Production, Team=Finance              │   │
+│  │                                                               │   │
+│  │  VPC Flow Logs ──────────────────────────► S3 Bucket          │   │
+│  │                                            (flow-logs-csw)   │   │
+│  │  Security Groups ◄── CSW programs policies                   │   │
+│  └──────────────────────────────────────────────────────────────┘   │
+│                  ▲ EC2 API (tags)                                     │
+│                  │ S3 API (flow logs)                                 │
+│                  │ EC2 API (security groups)                          │
+│                  │                                                    │
+│  IAM User / Role with CloudFormation-provisioned permissions          │
+└──────────────────────────────────────────────────────────────────────┘
+                   ▲
+                   │ HTTPS API calls
+                   │
+┌──────────────────┴───────────────────────────────────────────────────┐
+│  Cisco Secure Workload (SaaS or On-Prem)                              │
+│  AWS Connector (no virtual appliance needed)                          │
+│                                                                       │
+│  • Polls EC2 API for tag changes                                      │
+│  • Reads VPC flow logs from S3                                        │
+│  • Programs security groups when enforcement enabled                  │
+└──────────────────────────────────────────────────────────────────────┘</code></pre>
+<hr />
+<h2 id="capabilities">3. Capabilities</h2>
+<h3 id="label-ingestion-always-required">3.1 Label Ingestion (always
+required)</h3>
+<ul>
+<li>EC2 instance tags → CSW workload labels (synced continuously)</li>
+<li>Network interface tags → merged with instance labels</li>
+<li>Labels follow the format: AWS tag key = CSW label key</li>
+</ul>
+<h3 id="vpc-flow-log-ingestion-optional">3.2 VPC Flow Log Ingestion
+(optional)</h3>
+<ul>
+<li>Requires VPC flow logs enabled and published to <strong>Amazon
+S3</strong></li>
+<li>CSW reads S3 bucket on a schedule (not CloudWatch — must be S3)</li>
+<li>Flow logs must capture <strong>both Allowed and Denied</strong>
+traffic</li>
+<li>Required flow log attributes: Source/Destination IP, ports,
+protocol, bytes, packets, start/end time, action, TCP flags, interface
+ID, flow direction</li>
+</ul>
+<h3 id="segmentation-optional-requires-label-ingestion">3.3 Segmentation
+(optional, requires label ingestion)</h3>
+<ul>
+<li>CSW policy automatically programmed as <strong>AWS Security
+Groups</strong> on enforcement VPCs</li>
+<li><strong>Warning:</strong> All existing Security Group rules are
+<strong>overwritten</strong> when segmentation is enabled for a VPC.
+Back up existing rules first.</li>
+<li>Requires label ingestion to be enabled</li>
+</ul>
+<h3 id="eks-integration-optional">3.4 EKS Integration (optional)</h3>
+<ul>
+<li>Collects node, pod, and service metadata from EKS clusters</li>
+<li>Private EKS clusters require <strong>Secure Connector</strong> (CSW
+agentless proxy)</li>
+</ul>
+<hr />
+<h2 id="prerequisites">4. Prerequisites</h2>
+<h3 id="aws-account-requirements">AWS account requirements</h3>
+<ul class="task-list">
+<li><label><input type="checkbox"></input>AWS user (IAM user or role)
+dedicated to the CSW connector</label></li>
+<li><label><input type="checkbox"></input>CloudFormation permissions to upload
+the CFT generated by the CSW connector wizard</label></li>
+<li><label><input type="checkbox"></input>For flow logs: VPC flow logs
+enabled, published to S3; S3 bucket accessible by the connector IAM
+user</label></li>
+<li><label><input type="checkbox"></input>For segmentation: Existing Security
+Group rules backed up</label></li>
+<li><label><input type="checkbox"></input>For EKS: EKS cluster accessible by
+the connector IAM user; Secure Connector if private cluster</label></li>
+</ul>
+<h3 id="csw-requirements">CSW requirements</h3>
+<ul class="task-list">
+<li><label><input type="checkbox"></input>CSW cluster administrator access (to
+create connectors)</label></li>
+<li><label><input type="checkbox"></input>Target VRF/tenant configured for the
+AWS workloads</label></li>
+<li><label><input type="checkbox"></input>Each VPC belongs to exactly
+<strong>one</strong> AWS connector</label></li>
+</ul>
+<hr />
+<h2 id="step-a-aws-iam-setup">5. Step A — AWS IAM Setup</h2>
+<p>The CSW connector wizard generates a <strong>CloudFormation Template
+(CFT)</strong> that provisions the exact IAM permissions needed. This is
+the recommended approach.</p>
+<h3 id="a1-start-the-connector-wizard-in-csw">A1 — Start the connector
+wizard in CSW</h3>
+<ol type="1">
+<li>CSW UI: <strong>Manage &gt; Connectors &gt; Cloud &gt; + Add
+Connector &gt; AWS</strong></li>
+<li>The wizard will ask which capabilities you want to enable (Labels /
+Flow Logs / Segmentation / EKS)</li>
+<li>After capability selection, click <strong>Download CloudFormation
+Template</strong></li>
+</ol>
+<h3 id="a2-apply-the-cft-in-aws">A2 — Apply the CFT in AWS</h3>
+<p><strong>Option A — AWS Console:</strong> 1. Log into AWS Console →
+<strong>CloudFormation &gt; Stacks &gt; Create Stack</strong> 2. Upload
+the downloaded CFT 3. Follow the wizard to create the stack 4. Note the
+IAM user or role ARN created</p>
+<p><strong>Option B — AWS CLI:</strong></p>
+<div class="sourceCode" id="cb2"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="ex">aws</span> cloudformation deploy <span class="dt">\</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">--template-file</span> csw-connector-permissions.yaml <span class="dt">\</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">--stack-name</span> csw-connector-iam <span class="dt">\</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">--capabilities</span> CAPABILITY_IAM</span></code></pre></div>
+<h3 id="a3-role-based-authentication-recommended-over-access-keys">A3 —
+Role-based authentication (recommended over access keys)</h3>
+<p>CSW supports IAM <strong>role-based authentication</strong> to avoid
+long-lived credential keys: 1. In the connector wizard, click the
+<strong>Role</strong> tab 2. CSW will display an External ID and User
+ARN 3. Create an IAM role in AWS with the connector’s IAM permissions 4.
+Set the trust relationship to allow the CSW User ARN to assume the role
+5. Provide the Role ARN in the CSW connector wizard</p>
+<blockquote>
+<p>Role-based authentication is preferred over IAM user access keys for
+security — no long-lived credentials stored.</p>
+</blockquote>
+<h3 id="a4-for-cross-account-access">A4 — For cross-account access</h3>
+<p>To monitor VPCs in multiple AWS accounts: 1. Create the connector IAM
+role in a central account 2. In each additional account, create a role
+that the central account role can assume 3. Configure cross-account
+trust relationships per the AWS cross-account access documentation</p>
+<hr />
+<h2 id="step-b-configure-the-aws-connector-in-csw">6. Step B — Configure
+the AWS Connector in CSW</h2>
+<h3 id="b1-connector-basics">B1 — Connector basics</h3>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Connector Name</strong></td>
+<td>e.g., <code>aws-prod-connector</code></td>
+</tr>
+<tr>
+<td><strong>Authentication</strong></td>
+<td>Role-based (ARN) or Access Key / Secret</td>
+</tr>
+<tr>
+<td><strong>AWS Region</strong></td>
+<td>Primary region of your VPCs</td>
+</tr>
+</tbody>
+</table>
+<h3 id="b2-credential-entry">B2 — Credential entry</h3>
+<p><strong>Role-based (recommended):</strong> | Field | Value |
+|——-|——-| | Role ARN |
+<code>arn:aws:iam::123456789012:role/CSW-Connector-Role</code> | |
+External ID | (auto-populated by CSW) |</p>
+<p><strong>Key-based (alternative):</strong> | Field | Value | |——-|——-|
+| Access Key ID | IAM user access key | | Secret Access Key | IAM user
+secret |</p>
+<h3 id="b3-vpc-selection">B3 — VPC selection</h3>
+<p>After credentials are entered, CSW discovers all VPCs in the
+configured region: 1. Select the VPCs to integrate 2. For each VPC,
+choose which capabilities to enable</p>
+<hr />
+<h2 id="step-c-vpc-and-capability-configuration">7. Step C — VPC and
+Capability Configuration</h2>
+<p>For each selected VPC:</p>
+<h3 id="labels-inventory">Labels / Inventory</h3>
+<ul>
+<li><strong>Always enable</strong> — required by other capabilities</li>
+<li>CSW polls EC2 API for tag changes continuously</li>
+</ul>
+<h3 id="flow-log-ingestion">Flow Log Ingestion</h3>
+<p>If enabling flow log ingestion: 1. Ensure VPC flow logs are enabled
+and publishing to S3 2. Configure VPC flow logs in AWS (if not already
+done):
+<code>bash    aws ec2 create-flow-logs \      --resource-type VPC \      --resource-ids vpc-xxxxxxxx \      --traffic-type ALL \      --log-destination-type s3 \      --log-destination arn:aws:s3:::your-flow-log-bucket \      --log-format &quot;${version} ${srcaddr} ${dstaddr} ${srcport} ${dstport} ${protocol} ${packets} ${bytes} ${start} ${end} ${action} ${tcp-flags} ${interface-id} ${log-status} ${flow-direction} ${pkt-srcaddr} ${pkt-dstaddr}&quot;</code>
+3. Provide the S3 bucket name in the CSW connector VPC configuration</p>
+<h3 id="segmentation">Segmentation</h3>
+<p>If enabling segmentation: 1. <strong>Back up existing Security Group
+rules first</strong> 2. Enable <strong>Labels</strong> first (required
+dependency) 3. Enable Segmentation — CSW will take ownership of Security
+Groups on enforcement</p>
+<h3 id="apply">Apply</h3>
+<p>Click <strong>Test and Apply</strong>. The connector begins: -
+Pulling EC2 tags and registering workloads in CSW inventory - Reading
+VPC flow logs from S3 (if configured) - Monitoring for policy changes to
+push to Security Groups (if segmentation enabled)</p>
+<hr />
+<h2 id="eks-integration">8. EKS Integration</h2>
+<p>When EKS clusters are running in your VPC:</p>
+<ol type="1">
+<li>Enable the <strong>Kubernetes</strong> option in the VPC
+configuration</li>
+<li>CSW collects:
+<ul>
+<li>Node IP addresses and labels</li>
+<li>Pod IP addresses, namespaces, and labels</li>
+<li>Service cluster IPs and port mappings</li>
+</ul></li>
+<li>For <strong>private EKS clusters</strong>: deploy the <strong>Secure
+Connector</strong> to allow CSW API access through private
+networking</li>
+</ol>
+<p>K8s metadata appears in CSW inventory as labels:</p>
+<pre><code>pod/name = payment-api-6b9f7d
+pod/namespace = production
+pod/app = payment-api
+node/name = ip-10-0-1-55</code></pre>
+<hr />
+<h2 id="segmentation-with-aws-security-groups">9. Segmentation with AWS
+Security Groups</h2>
+<p>When enforcement is enabled in CSW for an AWS VPC:</p>
+<h3 id="how-it-works">How it works</h3>
+<ol type="1">
+<li>You define policies in CSW using label-based scopes (no IP addresses
+required)</li>
+<li>CSW translates policies → AWS Security Group rules</li>
+<li>Security Groups are automatically applied to EC2 instances and ENIs
+in the VPC</li>
+<li>As workloads start/stop or policies change, CSW updates Security
+Groups automatically</li>
+</ol>
+<h3 id="important-warnings">Important warnings</h3>
+<ul>
+<li><strong>All existing Security Group rules are replaced</strong> when
+segmentation is enabled — back up first</li>
+<li>CSW manages Security Groups for the duration enforcement is
+enabled</li>
+<li>To disable CSW segmentation management, turn off enforcement in the
+connector and manually restore Security Groups</li>
+</ul>
+<h3 id="policy-example">Policy example</h3>
+<pre><code>Consumer: Dev-VMs    (scope: tag/Environment = Development)
+Provider: Prod-DBs   (scope: tag/Environment = Production AND tag/Tier = Database)
+Action:   DENY ALL</code></pre>
+<p>CSW creates: Security Groups blocking Dev-VMs from reaching Prod-DBs
+— enforced natively by AWS.</p>
+<hr />
+<h2 id="verification">10. Verification</h2>
+<h3 id="check-connector-status">Check connector status</h3>
+<p><strong>Manage &gt; Connectors &gt; Cloud &gt; [AWS
+Connector]</strong> Status should show <strong>Active</strong> with last
+sync time.</p>
+<h3 id="check-inventory-enrichment">Check inventory enrichment</h3>
+<ol type="1">
+<li><strong>Inventory &gt; Workloads</strong> → search for an EC2
+instance IP</li>
+<li>Confirm AWS tags appear as labels</li>
+</ol>
+<h3 id="check-flow-data-if-enabled">Check flow data (if enabled)</h3>
+<ol type="1">
+<li><strong>Observe &gt; Traffic</strong> → filter by VPC CIDR</li>
+<li>Confirm flows from VPC are visible</li>
+</ol>
+<h3 id="test-segmentation-if-enabled">Test segmentation (if
+enabled)</h3>
+<ol type="1">
+<li>Enable enforcement for a test scope</li>
+<li>Check AWS Console → EC2 → Security Groups</li>
+<li>Confirm CSW-managed rules are present</li>
+</ol>
+<hr />
+<h2 id="limits">11. Limits</h2>
+<table>
+<colgroup>
+<col style="width: 53%" />
+<col style="width: 46%" />
+</colgroup>
+<thead>
+<tr>
+<th>Metric</th>
+<th>Limit</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>VPCs per AWS connector</td>
+<td>Multiple (one connector can manage multiple VPCs)</td>
+</tr>
+<tr>
+<td>AWS connectors per CSW cluster</td>
+<td>Multiple</td>
+</tr>
+<tr>
+<td>VPCs per cluster</td>
+<td>One connector per VPC</td>
+</tr>
+<tr>
+<td>Flow log source</td>
+<td>S3 only (not CloudWatch)</td>
+</tr>
+<tr>
+<td>Flow log partition</td>
+<td>Hourly and daily supported</td>
+</tr>
+<tr>
+<td>EKS private cluster</td>
+<td>Requires Secure Connector</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="troubleshooting">12. Troubleshooting</h2>
+<table>
+<colgroup>
+<col style="width: 56%" />
+<col style="width: 43%" />
+</colgroup>
+<thead>
+<tr>
+<th>Symptom</th>
+<th>Check</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Labels not syncing</td>
+<td>Verify IAM permissions (EC2:DescribeInstances, EC2:DescribeTags);
+check connector logs</td>
+</tr>
+<tr>
+<td>Flow logs not appearing</td>
+<td>Confirm VPC flow logs enabled → S3; S3 bucket accessible by IAM
+user; flow log format includes required fields</td>
+</tr>
+<tr>
+<td>Segmentation not enforcing</td>
+<td>Confirm Labels enabled; check IAM has
+EC2:AuthorizeSecurityGroupIngress/Egress permissions</td>
+</tr>
+<tr>
+<td>EKS pods not visible</td>
+<td>Confirm EKS IAM permissions in CFT; for private EKS, deploy Secure
+Connector</td>
+</tr>
+<tr>
+<td>Role auth failing</td>
+<td>Verify trust relationship between CSW User ARN and the connector
+role; check External ID matches</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="related-resources">13. Related Resources</h2>
+<table>
+<colgroup>
+<col style="width: 35%" />
+<col style="width: 38%" />
+<col style="width: 26%" />
+</colgroup>
+<thead>
+<tr>
+<th>Repository</th>
+<th>Description</th>
+<th>Best for</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a href="https://github.com/chandrapati/csw-azure-connector">csw-azure-connector</a></td>
+<td>Azure VNet label ingestion, NSG enforcement</td>
+<td>Azure workloads</td>
+</tr>
+<tr>
+<td><a href="https://github.com/chandrapati/csw-gcp-connector">csw-gcp-connector</a></td>
+<td>GCP VPC label ingestion, firewall enforcement</td>
+<td>GCP workloads</td>
+</tr>
+<tr>
+<td><a href="https://github.com/chandrapati/CSW-Agent-Installation-Guide">CSW-Agent-Installation-Guide</a></td>
+<td>Deploy CSW agents inside EC2 for deep visibility</td>
+<td>Agent-based visibility</td>
+</tr>
+<tr>
+<td><a href="https://github.com/chandrapati/CSW-Policy-Lifecycle">CSW-Policy-Lifecycle</a></td>
+<td>Policy discovery → enforcement workflow</td>
+<td>Policy management</td>
+</tr>
+<tr>
+<td><a href="https://github.com/chandrapati/csw-splunk-integration">csw-splunk-integration</a></td>
+<td>CSW syslog alerts → Splunk</td>
+<td>SecOps alerting</td>
+</tr>
+<tr>
+<td><a href="https://github.com/chandrapati/CSW-Operations-Toolkit">CSW-Operations-Toolkit</a></td>
+<td>Day-2 ops: health checks, reporting</td>
+<td>Ongoing operations</td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p><strong>Cloud strategy tip:</strong> Deploy AWS + Azure + GCP
+connectors together in a single CSW tenant for unified multi-cloud
+policy management with a consistent label taxonomy.</p>
+</blockquote>
+<hr />
+<p><em>Community reference — Cisco Solutions Engineering. Not an
+official Cisco product document.</em></p>
+</body>
+</html>
