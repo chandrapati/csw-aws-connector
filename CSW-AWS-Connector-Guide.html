@@ -94,8 +94,10 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; }
 — AWS Connector Guide</h1>
 <blockquote>
 <p><strong>Disclaimer:</strong> Community reference guide by Cisco
-Solutions Engineering. Always consult <a href="https://www.cisco.com/c/en/us/products/security/tetration/index.html">official
-Cisco Secure Workload documentation</a> for authoritative guidance.</p>
+Solutions Engineering. Always consult the <a href="https://www.cisco.com/c/en/us/products/security/secure-workload/index.html">official
+Cisco Secure Workload documentation</a> — specifically <a href="https://www.cisco.com/c/en/us/td/docs/security/workload_security/secure_workload/user-guide/4_0/cisco-secure-workload-user-guide-on-prem-v40/configure-and-manage-connectors-for-secure-workload.html">Configure
+and Manage Connectors → AWS Connector</a> — for authoritative
+guidance.</p>
 </blockquote>
 <h2 id="table-of-contents">Table of Contents</h2>
 <ol type="1">
@@ -165,9 +167,10 @@ provides</h3>
 </tbody>
 </table>
 <blockquote>
-<p><strong>No virtual appliance required.</strong> The AWS connector
-runs as a service within the CSW cluster — it connects to AWS APIs
-directly.</p>
+<p><strong>No virtual appliance required.</strong> Unlike the NetFlow /
+ERSPAN / ISE connectors, AWS (and the other cloud connectors) do
+<strong>not</strong> run on a Secure Workload Ingest or Edge virtual
+appliance. Secure Workload connects to the AWS APIs directly.</p>
 </blockquote>
 <hr />
 <h2 id="architecture">2. Architecture</h2>
@@ -216,21 +219,30 @@ required)</h3>
 <li>Requires VPC flow logs enabled and published to <strong>Amazon
 S3</strong></li>
 <li>CSW reads S3 bucket on a schedule (not CloudWatch — must be S3)</li>
+<li>Only <strong>VPC-level</strong> flow logs can be ingested</li>
 <li>Flow logs must capture <strong>both Allowed and Denied</strong>
 traffic</li>
-<li>Required flow log attributes: Source/Destination IP, ports,
-protocol, bytes, packets, start/end time, action, TCP flags, interface
-ID, flow direction</li>
+<li>Hourly and daily flow-log partitions are both supported</li>
+<li>Required flow log attributes (any others are ignored): Source
+Address, Destination Address, Source Port, Destination Port, Protocol,
+Packets, Bytes, Start Time, End Time, Action, TCP Flags, Interface-ID,
+<strong>Log status</strong>, Flow Direction, <strong>Packet Source
+Address</strong>, <strong>Packet Destination Address</strong></li>
 </ul>
 <h3 id="segmentation-optional-requires-label-ingestion">3.3 Segmentation
 (optional, requires label ingestion)</h3>
 <ul>
-<li>CSW policy automatically programmed as <strong>AWS Security
-Groups</strong> on enforcement VPCs</li>
-<li><strong>Warning:</strong> All existing Security Group rules are
-<strong>overwritten</strong> when segmentation is enabled for a VPC.
-Back up existing rules first.</li>
-<li>Requires label ingestion to be enabled</li>
+<li>When segmentation is enabled for a VPC, CSW programs the policies as
+<strong>AWS native Security Groups</strong>; relevant policies are
+programmed automatically once enforcement is enabled</li>
+<li>AWS Security Groups support <strong>ALLOW rules only</strong> — your
+segmentation policies should be Allow policies, with the
+<strong>Catch-All set to Deny</strong></li>
+<li><strong>Warning:</strong> Enabling segmentation for a VPC
+<strong>removes/overwrites the existing Security Groups</strong> on that
+VPC. CSW automatically backs up the SGs first (see §9); still take your
+own independent backup as defense-in-depth</li>
+<li>Requires label ingestion (Gather Labels) to be enabled</li>
 </ul>
 <h3 id="eks-integration-optional">3.4 EKS Integration (optional)</h3>
 <ul>
@@ -271,12 +283,15 @@ the recommended approach.</p>
 <h3 id="a1-start-the-connector-wizard-in-csw">A1 — Start the connector
 wizard in CSW</h3>
 <ol type="1">
-<li>CSW UI: <strong>Manage &gt; Connectors &gt; Cloud &gt; + Add
-Connector &gt; AWS</strong></li>
-<li>The wizard will ask which capabilities you want to enable (Labels /
-Flow Logs / Segmentation / EKS)</li>
-<li>After capability selection, click <strong>Download CloudFormation
-Template</strong></li>
+<li>CSW UI: <strong>Manage &gt; Workloads &gt; Connectors</strong>, then
+choose the <strong>AWS</strong> cloud connector and start the
+wizard</li>
+<li>The wizard will ask which capabilities you want to enable (Gather
+Labels / Ingest Flow Logs / Segmentation / EKS). <strong>Recommended for
+a POV: enable Gather Labels + Ingest Flow Logs now, and leave
+Segmentation off</strong> until you are ready to enforce (see §9)</li>
+<li>Based on the capabilities selected, CSW generates the matching
+<strong>CloudFormation Template (CFT)</strong> — download it</li>
 </ol>
 <h3 id="a2-apply-the-cft-in-aws">A2 — Apply the CFT in AWS</h3>
 <p><strong>Option A — AWS Console:</strong> 1. Log into AWS Console →
@@ -359,10 +374,22 @@ done):
 <code>bash    aws ec2 create-flow-logs \      --resource-type VPC \      --resource-ids vpc-xxxxxxxx \      --traffic-type ALL \      --log-destination-type s3 \      --log-destination arn:aws:s3:::your-flow-log-bucket \      --log-format &quot;${version} ${srcaddr} ${dstaddr} ${srcport} ${dstport} ${protocol} ${packets} ${bytes} ${start} ${end} ${action} ${tcp-flags} ${interface-id} ${log-status} ${flow-direction} ${pkt-srcaddr} ${pkt-dstaddr}&quot;</code>
 3. Provide the S3 bucket name in the CSW connector VPC configuration</p>
 <h3 id="segmentation">Segmentation</h3>
-<p>If enabling segmentation: 1. <strong>Back up existing Security Group
-rules first</strong> 2. Enable <strong>Labels</strong> first (required
-dependency) 3. Enable Segmentation — CSW will take ownership of Security
-Groups on enforcement</p>
+<blockquote>
+<p><strong>Best practice (per Cisco): do <em>not</em> enable
+Segmentation during initial configuration.</strong> Gather labels and
+flows first, build and analyze policies in a workspace, enable
+enforcement on that workspace, and only then return to the connector to
+enable Segmentation for the VPC. See §9.</p>
+</blockquote>
+<p>If/when you enable segmentation: 1. Confirm <strong>Gather
+Labels</strong> is enabled (required dependency) 2. Take your own backup
+of the VPC’s Security Groups (CSW also auto-backs them up — see §9) 3.
+<strong>Enable enforcement in the workspace <em>before</em> enabling
+Segmentation for the VPC.</strong> If you enable Segmentation on a VPC
+that is not in an enforcement-enabled workspace, <strong>all traffic on
+that VPC is allowed</strong> 4. Edit the connector and enable
+Segmentation for the target VPC — CSW then takes ownership of the
+Security Groups</p>
 <h3 id="apply">Apply</h3>
 <p>Click <strong>Test and Apply</strong>. The connector begins: -
 Pulling EC2 tags and registering workloads in CSW inventory - Reading
@@ -403,44 +430,76 @@ in the VPC</li>
 <li>As workloads start/stop or policies change, CSW updates Security
 Groups automatically</li>
 </ol>
-<h3 id="important-warnings">Important warnings</h3>
+<h3 id="pre-requisites-and-ordering-important">Pre-requisites and
+ordering (important)</h3>
 <ul>
-<li><strong>All existing Security Group rules are replaced</strong> when
-segmentation is enabled — back up first</li>
-<li>CSW manages Security Groups for the duration enforcement is
-enabled</li>
-<li>To disable CSW segmentation management, turn off enforcement in the
-connector and manually restore Security Groups</li>
+<li>Enabling Segmentation for a VPC <strong>removes the existing
+Security Groups</strong> on that VPC and replaces them with
+CSW-programmed SGs</li>
+<li><strong>Enable enforcement in the workspace <em>first</em>.</strong>
+Enabling Segmentation on a VPC that is not part of an
+enforcement-enabled workspace results in <strong>all traffic being
+allowed</strong> on that VPC</li>
+<li>AWS Security Groups are <strong>allow-list only</strong> — author
+Allow policies and rely on a <strong>Catch-All = Deny</strong> to block
+everything else. There is no per-policy “deny” rule in AWS SGs</li>
 </ul>
+<h3 id="automatic-backup-and-restore-of-security-groups">Automatic
+backup and restore of Security Groups</h3>
+<p>CSW automates SG backup/restore around the segmentation toggle: -
+<strong>Automatic backup</strong> — when you enable Segmentation for a
+VPC, CSW automatically backs up that VPC’s current Security Groups (runs
+in the background, no manual action). Only one backup state is kept per
+VPC; a re-backup occurs if VPCs change, and restores always use the
+<strong>most recent</strong> backup state - <strong>Automatic
+restore</strong> — when you <strong>disable</strong> Segmentation for
+the VPC, CSW restores the SGs <strong>it modified</strong> to that
+most-recent backup state; unrelated SG configuration is left untouched -
+Toggle via <strong>Manage &gt; Workloads &gt; Connectors &gt; AWS
+Connector &gt; Resources &gt; Resources Tree</strong>, then select the
+VPC and set the <strong>Segmentation</strong> radio button - Restore
+only applies to VPCs where Segmentation was enabled and then disabled -
+Still take an <strong>independent backup</strong> of your SGs as
+defense-in-depth before your first enforcement test</p>
 <h3 id="policy-example">Policy example</h3>
 <pre><code>Consumer: Dev-VMs    (scope: tag/Environment = Development)
 Provider: Prod-DBs   (scope: tag/Environment = Production AND tag/Tier = Database)
-Action:   DENY ALL</code></pre>
-<p>CSW creates: Security Groups blocking Dev-VMs from reaching Prod-DBs
-— enforced natively by AWS.</p>
+Action:   ALLOW TCP 1433   (only the flows you intend to permit)
+Catch-All (scope default): DENY</code></pre>
+<p>CSW programs Security Groups that permit only the explicitly-allowed
+flows; everything else (including Dev-VMs → Prod-DBs on any other port)
+is dropped by the Catch-All — enforced natively by AWS.</p>
 <hr />
 <h2 id="verification">10. Verification</h2>
 <h3 id="check-connector-status">Check connector status</h3>
-<p><strong>Manage &gt; Connectors &gt; Cloud &gt; [AWS
-Connector]</strong> Status should show <strong>Active</strong> with last
-sync time.</p>
+<p><strong>Manage &gt; Workloads &gt; Connectors</strong>, then select
+the AWS connector. Review the per-VPC rows; the connector should be
+syncing with a recent timestamp.</p>
 <h3 id="check-inventory-enrichment">Check inventory enrichment</h3>
 <ol type="1">
-<li><strong>Inventory &gt; Workloads</strong> → search for an EC2
-instance IP</li>
-<li>Confirm AWS tags appear as labels</li>
+<li>On the AWS connector page, click a <strong>VPC</strong> row, then
+click an <strong>IP address</strong> to open its <strong>Inventory
+Profile</strong></li>
+<li>Confirm AWS tags appear as labels (see <em>Labels Generated by Cloud
+Connectors</em>)</li>
 </ol>
 <h3 id="check-flow-data-if-enabled">Check flow data (if enabled)</h3>
 <ol type="1">
-<li><strong>Observe &gt; Traffic</strong> → filter by VPC CIDR</li>
-<li>Confirm flows from VPC are visible</li>
+<li>Use <strong>Investigate &gt; Traffic</strong> (Flow Search) and
+filter by the VPC CIDR</li>
+<li>Confirm flows from the VPC are visible (allow ~10–15 min after flow
+logs land in S3)</li>
 </ol>
 <h3 id="test-segmentation-if-enabled">Test segmentation (if
 enabled)</h3>
 <ol type="1">
-<li>Enable enforcement for a test scope</li>
-<li>Check AWS Console → EC2 → Security Groups</li>
-<li>Confirm CSW-managed rules are present</li>
+<li>Confirm enforcement is enabled on the workspace, then enable
+Segmentation for the VPC</li>
+<li>Check enforcement state under <strong>Defend &gt; Enforcement
+Status</strong> (see <em>Enforcement Status for Cloud
+Connectors</em>)</li>
+<li>In the AWS Console → EC2 → Security Groups, confirm CSW-managed
+rules are present</li>
 </ol>
 <hr />
 <h2 id="limits">11. Limits</h2>
@@ -465,12 +524,17 @@ enabled)</h3>
 <td>Multiple</td>
 </tr>
 <tr>
-<td>VPCs per cluster</td>
-<td>One connector per VPC</td>
+<td>Connectors per VPC</td>
+<td>Exactly one — a VPC can belong to only one AWS connector</td>
 </tr>
 <tr>
 <td>Flow log source</td>
-<td>S3 only (not CloudWatch)</td>
+<td><strong>S3 only</strong> — CSW cannot collect flow data from
+CloudWatch Logs</td>
+</tr>
+<tr>
+<td>Flow log scope</td>
+<td>VPC-level flow logs only</td>
 </tr>
 <tr>
 <td>Flow log partition</td>
@@ -508,12 +572,26 @@ user; flow log format includes required fields</td>
 </tr>
 <tr>
 <td>Segmentation not enforcing</td>
-<td>Confirm Labels enabled; check IAM has
-EC2:AuthorizeSecurityGroupIngress/Egress permissions</td>
+<td>Confirm Gather Labels enabled and the workspace has enforcement
+enabled; check IAM has EC2:AuthorizeSecurityGroupIngress/Egress
+permissions</td>
+</tr>
+<tr>
+<td>VPC unexpectedly allows all traffic</td>
+<td>Segmentation was enabled on a VPC whose workspace is not enforcing,
+or the Catch-All policy is not set to <strong>Deny</strong></td>
+</tr>
+<tr>
+<td>Concrete policy shows <strong>SKIPPED</strong></td>
+<td>The generated rule count exceeds AWS Security Group limits (AWS
+counts each unique subnet × unique port as a rule). Consolidate policies
+(e.g., larger subnets); contact AWS before raising SG limits, then
+update the limit in the connector config</td>
 </tr>
 <tr>
 <td>EKS pods not visible</td>
-<td>Confirm EKS IAM permissions in CFT; for private EKS, deploy Secure
+<td>Confirm EKS IAM permissions in CFT and the user/role is in the
+<code>aws-auth</code> ConfigMap; for private EKS, deploy Secure
 Connector</td>
 </tr>
 <tr>
