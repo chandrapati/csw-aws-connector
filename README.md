@@ -18,7 +18,7 @@ AWS connector: EC2 tag ingestion, VPC flow logs, Security Group enforcement, EKS
 
 ---
 
-## Related Cisco Secure Workload Resources
+## CSW Integration Guides & Resources
 
 | Repository | Description | Best for |
 |------------|-------------|---------|
